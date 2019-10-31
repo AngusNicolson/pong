@@ -1,20 +1,25 @@
+#!/usr/bin/env python3
 import pygame
 import sys
 import numpy as np
+import argparse
 
-FPS = 400 #Sets the speed of the game
+DESCRIPTION="A classic game of Pong."
+
+FPS = 400 # Sets the speed of the game
 
 WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 400
 LINE_THICKNESS = 10
 PADDLE_SIZE = 60
-PADDLE_OFFSET = 20 #Distance from sides of pitch
-OVERSHOOT = 5 #Min amount of paddle visible on screen
-MAX_ANGLE = 45 #degrees
+PADDLE_OFFSET = 20 # Distance from sides of pitch
+OVERSHOOT = 5 # Min amount of paddle visible on screen
+MAX_ANGLE = 45 # degrees
 BALL_VELOCITY = 1.3
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
+
 
 class Ball(object):
     def __init__(self, x, y, size):
@@ -39,6 +44,7 @@ class Ball(object):
         self.y = y
         self.rect.x = int(self.x)
         self.rect.y = int(self.y)
+
 
 class Paddle(object):
     def __init__(self, x, y, x_size, y_size):
@@ -98,10 +104,12 @@ class Game(object):
         else:
             self.serve = 2
    
+    
     def drawArena(self):
         self.DISPLAYSURF.fill(BLACK)
         pygame.draw.rect(self.DISPLAYSURF, WHITE, ((0,0), (WINDOW_WIDTH, WINDOW_HEIGHT)), LINE_THICKNESS*2)
         pygame.draw.line(self.DISPLAYSURF, WHITE, (WINDOW_WIDTH/2, 0),(WINDOW_WIDTH/2, WINDOW_HEIGHT), 1)
+    
     
     def checkEdgeCollision(self):
         point = False
@@ -124,6 +132,7 @@ class Game(object):
         
         return point
     
+    
     def AI(self):
         movement = 0
         if self.ball.rect.centery > self.paddle2.rect.centery:
@@ -132,6 +141,7 @@ class Game(object):
             movement = 0
         
         return movement
+    
     
     @staticmethod
     def calculateReturnVelocity(x, y, paddle):
@@ -204,62 +214,65 @@ class Game(object):
         
 
     def main(self):
-        
+        parser = argparse.ArgumentParser(description=DESCRIPTION)
+        parser.add_argument(
+                "--ai",
+                default=None,
+                help="Play against AI? Default is No."
+        )
+        args = parser.parse_args()
+
+        # Initialise game 
         pygame.init()
         pygame.font.init()
-        #Initialise game
+        
         pygame.display.set_caption('Pong')
         self.FPSCLOCK = pygame.time.Clock()
         self.DISPLAYSURF = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         self.scoreFont = pygame.font.SysFont('Arial', 50, bold=True)
         
         while True:
-            #Quit
+            # Quit
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
             
-            #Player 1 movement
+            # Player 1 movement
             keys_pressed = pygame.key.get_pressed()
             if keys_pressed[pygame.K_UP]:
                 self.paddle2.move(-1)
             if keys_pressed[pygame.K_DOWN]:
                 self.paddle2.move(1)
             
-            #Reset game
+            # Reset game
             if keys_pressed[pygame.K_SPACE]:
                 self.reset_ball()
              
-            #Player 2 movement
+            # Player 2 movement
             if keys_pressed[pygame.K_w]:
                 self.paddle1.move(-1)
             if keys_pressed[pygame.K_s]:
                 self.paddle1.move(1)
                 
-            """  
-            #AI movement 0 --> up, 1 --> down
-            movement = self.AI()
-            if movement == 0:
-                self.paddle2.move(-1)
-            elif movement == 1:
-                self.paddle2.move(1)
-            """
-            #Draw game at each frame
+            if args.ai is not None:
+            	#AI movement 0 --> up, 1 --> down
+            	movement = self.AI()
+            	if movement == 0:
+                	self.paddle2.move(-1)
+            	elif movement == 1:
+                	self.paddle2.move(1)
+            
+            # Draw game at each frame
             self.drawArena()
             self.ball.draw(self)
             self.paddle1.draw(self)
             self.paddle2.draw(self)
             
-            #Collisions and ball movement
+            # Collisions and ball movement
             point = self.checkEdgeCollision()
             hit = self.checkHitBall()
-            """
-            if hit == True:
-                print('hit')
-            """
-            
-            
+           
             if point == True:
                 
                 self.drawArena()
@@ -274,9 +287,10 @@ class Game(object):
             else:
                 self.ball.move()
                 self.displayScore()
-                #Update game for each frame
+                # Update game for each frame
                 pygame.display.update()
                 self.FPSCLOCK.tick(FPS)
+
 
 if __name__ == '__main__':
     new_game = Game()
