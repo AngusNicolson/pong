@@ -16,10 +16,30 @@ PADDLE_OFFSET = 20 # Distance from sides of pitch
 OVERSHOOT = 5 # Min amount of paddle visible on screen
 MAX_ANGLE = 45 # degrees
 BALL_VELOCITY = 1.3
+SCORE_OFFSETS = [-60, 35]
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
+
+class agent(object):
+    def __init__(self):
+        self.test = 0
+        self.actions = ["up", "down"]
+        self.epsilon = 0.2
+        self.Q = [0.49, 0.51]
+        self.side = 1 # or 2
+
+    def train(self, num_episodes):
+        for episode in range(num_episodes):
+            if np.rand() < self.epsilon:
+                action = np.random.choice(self.actions)
+        else:
+                action = self.actions[max(self.Q).index] 
+
+    def get_train_data(self, game):
+       return game
+        
 
 class Ball(object):
     def __init__(self, x, y, size):
@@ -75,19 +95,21 @@ class Paddle(object):
         
         
 class Game(object):
-    def __init__(self):
+    def __init__(self, display=True):
+        self.display = display
         
         #Set initial coordinates of objects
         ball_X = (WINDOW_WIDTH - LINE_THICKNESS)/2
         ball_Y = (WINDOW_HEIGHT - LINE_THICKNESS)/2
-        paddle1_X = PADDLE_OFFSET
-        paddle1_Y = (WINDOW_HEIGHT - PADDLE_SIZE)/2
-        paddle2_X = WINDOW_WIDTH - LINE_THICKNESS - PADDLE_OFFSET
-        paddle2_Y = (WINDOW_HEIGHT - PADDLE_SIZE)/2
+        paddle_l_X = PADDLE_OFFSET
+        paddle_l_Y = (WINDOW_HEIGHT - PADDLE_SIZE)/2
+        paddle_r_X = WINDOW_WIDTH - LINE_THICKNESS - PADDLE_OFFSET
+        paddle_r_Y = (WINDOW_HEIGHT - PADDLE_SIZE)/2
         
         #Create objects
-        self.paddle1 = Paddle(paddle1_X, paddle1_Y, LINE_THICKNESS, PADDLE_SIZE)
-        self.paddle2 = Paddle(paddle2_X, paddle2_Y, LINE_THICKNESS, PADDLE_SIZE)
+        self.paddles = []
+        self.paddles.append(Paddle(paddle_l_X, paddle_l_Y, LINE_THICKNESS, PADDLE_SIZE))
+        self.paddles.append(Paddle(paddle_r_X, paddle_r_Y, LINE_THICKNESS, PADDLE_SIZE))
         self.ball = Ball(ball_X, ball_Y, LINE_THICKNESS)
         
         
@@ -96,13 +118,13 @@ class Game(object):
         self.ball.vy = 0 # -1 = up, 1 = down
         
         #Initial scores
-        self.score1, self.score2 = 0, 0
+        self.scores = [0, 0]
         
         #Random initial serve
         if np.random.rand() > 0.5:
-            self.serve = 1
+            self.serve = 0
         else:
-            self.serve = 2
+            self.serve = 1
    
     
     def drawArena(self):
@@ -121,12 +143,12 @@ class Game(object):
             self.ball.place(self.ball.x, WINDOW_HEIGHT - 2*LINE_THICKNESS)
         if self.ball.x <= LINE_THICKNESS:
             self.ball.vx = self.ball.vx * -1
-            self.score2 +=1
+            self.scores[1] +=1
             self.reset()
             point = True
         if self.ball.x >= WINDOW_WIDTH - 2*LINE_THICKNESS:
             self.ball.vx = self.ball.vx * -1
-            self.score1 +=1
+            self.scores[0] +=1
             self.reset()
             point = True
         
@@ -135,9 +157,9 @@ class Game(object):
     
     def AI(self):
         movement = 0
-        if self.ball.rect.centery > self.paddle2.rect.centery:
+        if self.ball.rect.centery > self.paddles[1].rect.centery:
             movement = 1
-        elif self.ball.rect.centery < self.paddle2.rect.centery:
+        elif self.ball.rect.centery < self.paddles[1].rect.centery:
             movement = 0
         
         return movement
@@ -157,28 +179,25 @@ class Game(object):
 
     def checkHitBall(self):
         hit = False
-        if self.paddle1.rect.colliderect(self.ball.rect):
-            self.ball.vx, self.ball.vy = self.calculateReturnVelocity(self.ball.x, self.ball.y, self.paddle1.rect)
+        if self.paddles[0].rect.colliderect(self.ball.rect):
+            self.ball.vx, self.ball.vy = self.calculateReturnVelocity(self.ball.x, self.ball.y, self.paddles[0].rect)
             hit = True
             
-        if self.paddle2.rect.colliderect(self.ball.rect):
-            self.ball.vx, self.ball.vy = self.calculateReturnVelocity(self.ball.x, self.ball.y, self.paddle2.rect)
+        if self.paddles[1].rect.colliderect(self.ball.rect):
+            self.ball.vx, self.ball.vy = self.calculateReturnVelocity(self.ball.x, self.ball.y, self.paddles[1].rect)
             hit = True
             self.ball.vx = -self.ball.vx
         
         return hit
 
 
-    def displayScore(self):
-        surf1 = self.scoreFont.render(str(self.score1), False, WHITE)
-        rect1 = surf1.get_rect()
-        rect1.topleft = (WINDOW_WIDTH/2 - 60, LINE_THICKNESS)
-        self.DISPLAYSURF.blit(surf1, rect1)
-        
-        surf2 = self.scoreFont.render(str(self.score2), False, WHITE)
-        rect2 = surf2.get_rect()
-        rect2.topleft = (WINDOW_WIDTH/2 + 35, LINE_THICKNESS)
-        self.DISPLAYSURF.blit(surf2, rect2)
+    def displayScore(self): 
+        for i in range(2):
+            surf = self.scoreFont.render(str(self.scores[i]), False, WHITE)
+            rect = surf.get_rect()
+            rect.topleft = (WINDOW_WIDTH/2 + SCORE_OFFSETS[i], LINE_THICKNESS)
+            self.DISPLAYSURF.blit(surf, rect)
+
         
     def reset_ball(self):
         ball_X = (WINDOW_WIDTH - LINE_THICKNESS)/2
@@ -199,17 +218,17 @@ class Game(object):
             self.ball.vx = +1
             self.serve = 1
             
-        paddle1_X = PADDLE_OFFSET
-        paddle1_Y = (WINDOW_HEIGHT - PADDLE_SIZE)/2
-        paddle2_X = WINDOW_WIDTH - LINE_THICKNESS - PADDLE_OFFSET
-        paddle2_Y = (WINDOW_HEIGHT - PADDLE_SIZE)/2
+        paddle_l_X = PADDLE_OFFSET
+        paddle_l_Y = (WINDOW_HEIGHT - PADDLE_SIZE)/2
+        paddle_r_X = WINDOW_WIDTH - LINE_THICKNESS - PADDLE_OFFSET
+        paddle_r_Y = (WINDOW_HEIGHT - PADDLE_SIZE)/2
         
-        self.paddle1.place(paddle1_X, paddle1_Y)
-        self.paddle2.place(paddle2_X, paddle2_Y)
+        self.paddles[0].place(paddle_l_X, paddle_l_Y)
+        self.paddles[1].place(paddle_r_X, paddle_r_Y)
         
         self.ball.draw(self)
-        self.paddle1.draw(self)
-        self.paddle2.draw(self)
+        self.paddles[0].draw(self)
+        self.paddles[1].draw(self)
         
         
 
@@ -241,9 +260,9 @@ class Game(object):
             # Player 1 movement
             keys_pressed = pygame.key.get_pressed()
             if keys_pressed[pygame.K_UP]:
-                self.paddle2.move(-1)
+                self.paddles[1].move(-1)
             if keys_pressed[pygame.K_DOWN]:
-                self.paddle2.move(1)
+                self.paddles[1].move(1)
             
             # Reset game
             if keys_pressed[pygame.K_SPACE]:
@@ -251,23 +270,23 @@ class Game(object):
              
             # Player 2 movement
             if keys_pressed[pygame.K_w]:
-                self.paddle1.move(-1)
+                self.paddles[0].move(-1)
             if keys_pressed[pygame.K_s]:
-                self.paddle1.move(1)
+                self.paddles[0].move(1)
                 
             if args.ai is not None:
             	#AI movement 0 --> up, 1 --> down
             	movement = self.AI()
             	if movement == 0:
-                	self.paddle2.move(-1)
+                	self.paddles[1].move(-1)
             	elif movement == 1:
-                	self.paddle2.move(1)
+                	self.paddle[1].move(1)
             
             # Draw game at each frame
             self.drawArena()
             self.ball.draw(self)
-            self.paddle1.draw(self)
-            self.paddle2.draw(self)
+            self.paddles[0].draw(self)
+            self.paddles[1].draw(self)
             
             # Collisions and ball movement
             point = self.checkEdgeCollision()
@@ -277,8 +296,8 @@ class Game(object):
                 
                 self.drawArena()
                 self.ball.draw(self)
-                self.paddle1.draw(self)
-                self.paddle2.draw(self)
+                self.paddles[0].draw(self)
+                self.paddles[1].draw(self)
                 self.displayScore()
                 pygame.display.update()
                 self.FPSCLOCK.tick(FPS)
