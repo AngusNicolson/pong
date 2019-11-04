@@ -280,7 +280,7 @@ class Game(object):
             	if movement == 0:
                 	self.paddles[1].move(-1)
             	elif movement == 1:
-                	self.paddle[1].move(1)
+                	self.paddles[1].move(1)
             
             # Draw game at each frame
             self.drawArena()
